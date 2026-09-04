@@ -29,7 +29,7 @@
 | `/data/market_agent/market_agent.log` | 每轮编排日志 |
 | `/data/log/market_agent_supervisor.log` | supervisor 侧日志（进程管理页面 Tail -f 可看） |
 
-`config.json` 由 `gen_config.py` 按 `DNF_DB_ROOT_PASSWORD` / `SERVER_GROUP_DB` 环境变量渲染生成；
+`config.json` 由 `gen_config.py` 按 `DNF_DB_GAME_PASSWORD` / `SERVER_GROUP_DB` 环境变量渲染生成；
 想改手续费、寄售档位、补货价格等，直接编辑 `/data/market_agent/config.json` 后
 执行 `python2.7 /data/market_agent/market_agent.py reset` 生效。
 
@@ -68,15 +68,24 @@ docker exec dnf sh -c "cd /data/market_agent && python2.7 market_agent.py once"
 docker exec dnf sh -c "cd /data/market_agent && python2.7 market_agent.py reset"
 ```
 
+> ⚠️ **手动执行一律在 `/data/market_agent` 下跑**。`/home/template/market_agent` 是镜像模板目录
+> （没有 `config.json`；也别把 `config.json.template` 拷成 `config.json`——其中密码是
+> `__DNF_DB_GAME_PASSWORD__` 占位符，会导致 1045 Access denied）。
+> 若连库 1045 Access denied：先重跑幂等初始化
+> `bash /home/template/init/market_agent/setup_market_agent.sh`（按当前 `$DNF_DB_GAME_PASSWORD`
+> 同步 game@localhost 授权与 config 用户/密码），再用
+> `mysql -h127.0.0.1 -P3306 -ugame -p'<密码>' -e "SELECT 1;"` 验证。
+
 > ⚠️ **切勿执行 `market_agent.py init`**：它会 DROP 并重建 `pending_mail`，
 > 清空未投递的邮件队列。容器初始化脚本已用幂等方式建好全部表结构，无需 init。
 > `reset` 期间市场服务会重启加载全部挂单、期间打不开，只手动使用，别放进定时任务。
 
 ## 细节说明
 
-* 数据库：编排脚本以 `auction_bot` 用户经 unix socket 连 MySQL；初始化脚本每次启动幂等地
-  建表（只 `CREATE IF NOT EXISTS` / `INSERT IGNORE`，绝不 DROP）、播种 12 档金币寄售、
-  授权 `auction_bot`。`item_catalog` 仅在缺表/为空时导入。
+* 数据库：编排脚本复用 `game` 库用户（与游戏服/frida.js 同一账号）经 unix socket 连 MySQL；
+  初始化脚本每次启动幂等地建表（只 `CREATE IF NOT EXISTS` / `INSERT IGNORE`，绝不 DROP）、
+  播种 12 档金币寄售、同步 `game@localhost` 密码（按 `$DNF_DB_GAME_PASSWORD`）。
+  `item_catalog` 仅在缺表/为空时导入。
 * 编码：镜像内置 MySQL 5.0.95 编译默认字符集即 latin1（`my.cnf` 无需任何改动），连接对原始
   字节透明——上游坑点⑤要求的手工 my.cnf 配置在本镜像天然满足；邮件文本按原始 UTF-8 字节
   经 `UNHEX()` 写入 `VARBINARY`，`mail_encoding` 固定 `utf-8`，**切勿改 gbk**。

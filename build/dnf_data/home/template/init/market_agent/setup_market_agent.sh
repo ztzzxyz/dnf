@@ -2,7 +2,7 @@
 
 # 拍卖行/金币寄售自动做市(market_agent)初始化, 幂等, 每次启动都执行
 # 1) /home/template/market_agent -> /data/market_agent: 代码/vendor 每次覆盖(随镜像升级), 配置/参考数据仅首次生成
-# 2) 数据库: 建 frida 库表(幂等, 不 DROP)+播种金币寄售12档+auction_bot 授权+item_catalog 首次导入
+# 2) 数据库: 建 frida 库表(幂等, 不 DROP)+播种金币寄售12档+game@localhost 密码同步+item_catalog 首次导入
 # 注意: 不要在本脚本里跑 market_agent.py init —— 它会 DROP pending_mail, 清空未投递邮件队列
 
 TEMPLATE_DIR=/home/template/market_agent
@@ -29,12 +29,31 @@ if [ ! -f "$DATA_DIR/config.json" ];then
 else
   echo "market_agent config.json have already inited, do nothing!"
 fi
+# 密码同步: config.json 仅首次生成, 而 game@localhost 授权每次启动都按当前 $DNF_DB_GAME_PASSWORD 重刷;
+# 若容器改密重建(/data 卷持久化保留旧 config.json), 旧密码与新授权不匹配 -> 1045 Access denied, 故每 boot 同步一次
+if [ -f "$DATA_DIR/config.json" ];then
+  python2.7 - "$DATA_DIR/config.json" <<'PYEOF'
+import io, json, os, sys
+p = sys.argv[1]
+cfg = json.load(io.open(p, encoding="utf-8"))
+pwd = os.environ.get("DNF_DB_GAME_PASSWORD") or "uu5!^%jg"
+mysql = cfg.setdefault("mysql", {})
+if mysql.get("user") != "game" or mysql.get("password") != pwd:
+    mysql["user"] = "game"
+    mysql["password"] = pwd
+    with io.open(p, "w", encoding="utf-8") as f:
+        f.write(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")
+    print("market_agent config.json db user/password synced to current env")
+PYEOF
+fi
 
 # ---------- 2. 数据库初始化(幂等, 不 DROP 任何表) ----------
-# GRANT ... IDENTIFIED BY 在 MySQL 5.0 上同时完成"建用户+设密码+授权"(无 CREATE USER IF NOT EXISTS)
-# 密码中的单引号/反斜杠需转义后才能拼进 SQL 字符串
-ESC_PWD=$(printf '%s' "$DNF_DB_ROOT_PASSWORD" | sed -e "s/['\\]/\\\\&/g")
-SG_DB=${SERVER_GROUP_DB:-cain}
+# 权限复用 game 库用户(与游戏服/frida.js 同一账号, init_main_db/init_server_group_db 已授 ALL ON *.*,
+# 自动覆盖新建的 frida 库, 无需逐库 GRANT). 此处只同步 game@localhost 条目:
+# agent 走 unix_socket 连接, 在 MySQL 侧呈现为 'game'@'localhost', 而初始化脚本只建 game@'<网关IP>',
+# 故补齐该 host 条目并按当前 $DNF_DB_GAME_PASSWORD 重设密码(GRANT ... IDENTIFIED BY 在 MySQL 5.0
+# 上同时完成"建用户+设密码+授权", 幂等). 密码中的单引号/反斜杠需转义后才能拼进 SQL 字符串
+ESC_PWD=$(printf '%s' "$DNF_DB_GAME_PASSWORD" | sed -e "s/['\\]/\\\\&/g")
 
 mysql -h127.0.0.1 -P3306 -uroot -p"$DNF_DB_ROOT_PASSWORD" --default-character-set=utf8 <<EOF
 SET NAMES utf8;
@@ -92,16 +111,8 @@ INSERT IGNORE INTO frida.cera_consign_list (item_id, gold_label, restock_price, 
 (2675346, '2000万金币', 4000, 20, 4000, 1),
 (2675347, '3000万金币', 6000, 20, 6000, 1);
 
-GRANT ALL PRIVILEGES ON frida.* TO 'auction_bot'@'localhost' IDENTIFIED BY '${ESC_PWD}';
-GRANT ALL PRIVILEGES ON frida.* TO 'auction_bot'@'%' IDENTIFIED BY '${ESC_PWD}';
-GRANT ALL PRIVILEGES ON \`taiwan_${SG_DB}_auction_gold\`.* TO 'auction_bot'@'localhost' IDENTIFIED BY '${ESC_PWD}';
-GRANT ALL PRIVILEGES ON \`taiwan_${SG_DB}_auction_gold\`.* TO 'auction_bot'@'%' IDENTIFIED BY '${ESC_PWD}';
-GRANT ALL PRIVILEGES ON \`taiwan_${SG_DB}_auction_cera\`.* TO 'auction_bot'@'localhost' IDENTIFIED BY '${ESC_PWD}';
-GRANT ALL PRIVILEGES ON \`taiwan_${SG_DB}_auction_cera\`.* TO 'auction_bot'@'%' IDENTIFIED BY '${ESC_PWD}';
-GRANT SELECT ON \`taiwan_${SG_DB}\`.* TO 'auction_bot'@'localhost' IDENTIFIED BY '${ESC_PWD}';
-GRANT SELECT ON \`taiwan_${SG_DB}\`.* TO 'auction_bot'@'%' IDENTIFIED BY '${ESC_PWD}';
-GRANT SELECT,INSERT,UPDATE,DELETE ON \`taiwan_${SG_DB}_2nd\`.* TO 'auction_bot'@'localhost' IDENTIFIED BY '${ESC_PWD}';
-GRANT SELECT,INSERT,UPDATE,DELETE ON \`taiwan_${SG_DB}_2nd\`.* TO 'auction_bot'@'%' IDENTIFIED BY '${ESC_PWD}';
+-- 同步 game@localhost: unix_socket 连接所需的 host 条目 + 按当前环境变量重设密码(幂等)
+GRANT ALL PRIVILEGES ON *.* TO 'game'@'localhost' IDENTIFIED BY '${ESC_PWD}';
 FLUSH PRIVILEGES;
 EOF
 

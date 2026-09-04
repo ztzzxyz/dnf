@@ -1,12 +1,12 @@
 {
-  "_comment": "多市场做市编排配置(market_agent.py)模板. 由 init/market_agent/setup_market_agent.sh 调 gen_config.py 渲染为 /data/market_agent/config.json(占位符: __DNF_DB_ROOT_PASSWORD__/__SERVER_GROUP_DB__). 中文用 UTF-8. 默认走 unix_socket 本地连库. 停/启服务已适配本容器 supervisor(program 在 [group:dnf] 内, 需带组前缀).",
+  "_comment": "多市场做市编排配置(market_agent.py)模板. 由 init/market_agent/setup_market_agent.sh 调 gen_config.py 渲染为 /data/market_agent/config.json(占位符: __DNF_DB_GAME_PASSWORD__/__SERVER_GROUP_DB__). 中文用 UTF-8. 默认走 unix_socket 本地连库(复用 game 用户, 与游戏服/frida.js 同一账号). 停/启服务已适配本容器 supervisor(program 在 [group:dnf] 内, 需带组前缀).",
 
   "mysql": {
     "unix_socket": "/var/lib/mysql/mysql.sock",
     "host": "127.0.0.1",
     "port": 3306,
-    "user": "auction_bot",
-    "password": "__DNF_DB_ROOT_PASSWORD__",
+    "user": "game",
+    "password": "__DNF_DB_GAME_PASSWORD__",
     "frida_db": "frida",
     "charset": "utf8"
   },
