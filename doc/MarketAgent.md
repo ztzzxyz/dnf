@@ -37,12 +37,15 @@
 
 **金币寄售开箱即用；拍卖行默认补货列表为空，需要手动导入一次。**
 
-镜像内置的 `restock_list_generated.sql` 是从**特定 pvf 版本**挑出的物品。若你的
-Script.pvf 版本与之不符，混入不在 `iteminfo.dat` 白名单内的物品会导致拍卖行启动时
-`RegistItem()` 失败、**整服起不来**（上游 README 坑点⑥）。因此不自动导入，操作方式：
+镜像内置的 `restock_list_generated.sql` **已按本镜像自带的
+`build/dnf_data/home/template/neople/{auction,point}/iteminfo.dat` 白名单（11210 款）
+预过滤**（6521 款中剔除 592 款不在白名单内的物品），与本镜像 pvf 严格一致，可直接导入。
+若你更换了 pvf/服务端版本，`iteminfo.dat` 随之变化，需重新按新白名单核对后再导入——
+混入不在 `iteminfo.dat` 白名单内的物品会导致拍卖行启动时 `RegistItem()` 失败、
+**整服起不来**（上游 README 坑点⑥）。因此不自动导入，操作方式：
 
 ```shell
-# 方式一: 直接用内置列表(仅当 pvf 版本匹配时)
+# 方式一: 直接用内置列表(已按本镜像 iteminfo 过滤, 默认镜像可直接用)
 docker exec dnf sh -c "mysql -h127.0.0.1 -P3306 -uroot -p'88888888' frida < /data/market_agent/restock_list_generated.sql"
 
 # 方式二: 参照 restock_list_example.sql 按自己的 pvf 挑物品后导入
