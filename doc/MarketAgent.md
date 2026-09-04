@@ -77,8 +77,9 @@ docker exec dnf sh -c "cd /data/market_agent && python2.7 market_agent.py reset"
 * 数据库：编排脚本以 `auction_bot` 用户经 unix socket 连 MySQL；初始化脚本每次启动幂等地
   建表（只 `CREATE IF NOT EXISTS` / `INSERT IGNORE`，绝不 DROP）、播种 12 档金币寄售、
   授权 `auction_bot`。`item_catalog` 仅在缺表/为空时导入。
-* 编码：镜像 `my.cnf` 的 latin1 默认字符集对原始字节透明（上游坑点⑤的解法），
-  邮件文本按原始 UTF-8 字节入 `VARBINARY`，`mail_encoding` 固定 `utf-8`，**切勿改 gbk**。
+* 编码：镜像内置 MySQL 5.0.95 编译默认字符集即 latin1（`my.cnf` 无需任何改动），连接对原始
+  字节透明——上游坑点⑤要求的手工 my.cnf 配置在本镜像天然满足；邮件文本按原始 UTF-8 字节
+  经 `UNHEX()` 写入 `VARBINARY`，`mail_encoding` 固定 `utf-8`，**切勿改 gbk**。
 * 已有部署升级：`/data` 内文件只在缺失时才生成。想让新的参考数据生效，
   删除 `/data/market_agent` 下对应文件后 `docker restart dnf` 即可重新生成。
 * 上游完整文档与原理（做市策略、坑点清单、多频道细节）见
