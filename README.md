@@ -141,6 +141,11 @@ docker restart dnf
 
 或在进程管理页面(http://PUBLIC_IP:2000 页面手动重启相关进程)。
 
+## 拍卖行/金币寄售自动做市
+
+已集成 [dnf-market-agent](https://github.com/ztzzxyz/dnf-market-agent)：金币寄售开箱即用（100万~3000万 12 档金币包），
+拍卖行自动补货/回收，每小时整点自动执行，邮件自动发放。详见 [doc/MarketAgent.md](doc/MarketAgent.md)。
+
 ## 常见问题
 
 1.点击网关登录，没反应，不出游戏（请透过Garena+执行）

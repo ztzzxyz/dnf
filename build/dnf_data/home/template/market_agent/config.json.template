@@ -1,0 +1,93 @@
+{
+  "_comment": "多市场做市编排配置(market_agent.py)模板. 由 init/market_agent/setup_market_agent.sh 调 gen_config.py 渲染为 /data/market_agent/config.json(占位符: __DNF_DB_ROOT_PASSWORD__/__SERVER_GROUP_DB__). 中文用 UTF-8. 默认走 unix_socket 本地连库. 停/启服务已适配本容器 supervisor(program 在 [group:dnf] 内, 需带组前缀).",
+
+  "mysql": {
+    "unix_socket": "/var/lib/mysql/mysql.sock",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "auction_bot",
+    "password": "__DNF_DB_ROOT_PASSWORD__",
+    "frida_db": "frida",
+    "charset": "utf8"
+  },
+
+  "interval": 3600,
+
+  "mail_encoding": "utf-8",
+  "_mail_encoding_note": "客户端期望 UTF-8 字节(已验证: 整点广播UTF-8字符串直发正常; Navicat手插UTF-8邮件正常). 配合 /etc/my.cnf [client] latin1 让游戏读写字节透明. 切勿改成 gbk, 否则离线邮件乱码",
+
+  "system_owner": {
+    "owner_type": 1,
+    "id_base": 90000001,
+    "nexon_base": 18000000,
+    "rotate_every": 10,
+    "_note": "实测玩家与系统挂单 owner_type 同为1, 故用 owner_id 区分: <id_base=玩家, >=id_base=系统. id_base 必须大于任何真实玩家 charac_no. 两市场共用此边界(玩家 charac_no 全局唯一)",
+
+    "special": {
+      "enabled": true,
+      "charac_db": "taiwan___SERVER_GROUP_DB__",
+      "game_db": "taiwan___SERVER_GROUP_DB___2nd",
+      "addinfo_base": 2100000000,
+      "tokens": ["title name", "creature", "artifact red", "artifact blue", "artifact green"],
+      "creature_tokens": ["creature"],
+      "drop_tokens": [],
+      "_note": "零桩特殊补货. 实测: 称号/装扮/红蓝绿装备/宠物均无须 charac_info 桩角色, 全挂普通系统 90M 假 owner(同普通补货, 按 rotate_every 每owner件数轮换, 过密会崩加载). 非宠物(称号/装扮/装备)add_info 取 addinfo_base 高位段唯一递增(★装扮/artifact 的 add_info 必须全局唯一, =0 重复会崩RegistItem; 称号宽容但统一走高位★). 宠物(creature)须 auction.owner_id==creature_items.charac_no(两者同为该90M假号), 据 game_db.creature_items 自增 ui_id 当 add_info(不可手填,否则与游戏服并发孵化撞主键)并建实例(it_id=蛋id)否则买家无法孵化. (artifact red 曾误判需桩, 实为早期测试克隆了称号的非法列值; 同列方案即零桩, 故 drop_tokens 空.) charac_db 仅供系统/玩家 m_id 判据用. 需 mysql 用户对 charac_db/game_db 有 SELECT/INSERT/DELETE 权限"
+    }
+  },
+
+  "vendor_path": "/data/market_agent/vendor",
+  "log_path": "/data/market_agent/market_agent.log",
+
+  "_markets_note": "每个市场独立配置: 库/停启服务/补货列表/回收规则. run_once 依次对每个 enabled 市场跑 停服务->回收->补货->启服务. 关闭某市场只需 enabled=false. 首次部署 restock_list 为空, 拍卖行补货不生效(无风险), 按 doc/MarketAgent.md 导入 item_catalog.sql 与 restock_list 后生效",
+  "markets": {
+    "auction": {
+      "enabled": true,
+      "label": "拍卖行",
+      "db": "taiwan___SERVER_GROUP_DB___auction_gold",
+      "owner_name": "拍卖行",
+      "stop_cmd": "supervisorctl stop dnf:auction",
+      "start_cmd": "supervisorctl start dnf:auction",
+      "restock": {
+        "mode": "catalog_list",
+        "list": "restock_list",
+        "rand_low": 1,
+        "rand_high": 1,
+        "_note": "补货按 restock_list 的 quantity/stack_size 补缺口, 单价=system_price×随机(rand_low~rand_high)"
+      },
+      "recycle": {
+        "enabled": true,
+        "mode": "catalog_rules",
+        "fee_rate": 0.05,
+        "deposit": 10000,
+        "equipment_by_rarity": { "2": 200000, "3": 2000000 },
+        "material_by_rarity": { "0": 100, "1": 500, "2": 1000, "3": 10000 },
+        "material_tokens": ["material", "material expert job"],
+        "special_by_kind_type": { "equipment:creature": 1000000 },
+        "item_overrides": {},
+        "_note": "回收价=成交价-5%手续费+10000押金(玩家上架已付该押金, 直接删挂单不退, 必须如数退还). JOIN item_catalog 取类型/稀有度, 挂单单价<=限价即回收. 稀有度: 0普通 1高级 2稀有 3神器 4史诗. special_by_kind_type 按 大类:token 给特例; item_overrides 按编号单品覆盖(最高优先级)"
+      }
+    },
+
+    "cera": {
+      "enabled": true,
+      "label": "金币寄售",
+      "db": "taiwan___SERVER_GROUP_DB___auction_cera",
+      "owner_name": "金币寄售",
+      "stop_cmd": "supervisorctl stop dnf:point",
+      "start_cmd": "supervisorctl start dnf:point",
+      "restock": {
+        "mode": "fixed_list",
+        "list": "cera_consign_list",
+        "_note": "补货按 cera_consign_list 每种金币包补足 restock_qty 条, 每条 add_info=1(不堆叠), instant_price=restock_price(代币券标价)"
+      },
+      "recycle": {
+        "enabled": true,
+        "mode": "consign_threshold",
+        "fee_rate": 0.02,
+        "deposit": 0,
+        "mail_item_id": 2681762,
+        "_note": "金币寄售货币=代币券(item 2681762). 玩家寄售单 instant_price(代币券标价)<=cera_consign_list.recycle_price 即回收, 发代币券=instant_price×(1-2%手续费), 无押金(实测200标价→196到手). 邮件为代币券物品邮件"
+      }
+    }
+  }
+}

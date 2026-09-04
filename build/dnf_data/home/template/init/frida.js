@@ -97,17 +97,17 @@ function api_get_jewel_socket_data(mysql, id) {//获取徽章数据,存在返回
     return v;
 }
 function api_exitjeweldata(id) {//0代表不存在,存在返回1
-    api_MySQL_exec(mysql_frida, 'SELECT andonglishanbai_flag FROM data where equ_id = ' + id + ';')
+    api_MySQL_exec(mysql_myequ_jewel, 'SELECT andonglishanbai_flag FROM data where equ_id = ' + id + ';')
     var exit = 0;
-    if (MySQL_get_n_rows(mysql_frida) == 1) {
-        if (MySQL_fetch(mysql_frida)) {
-            exit = api_MySQL_get_int(mysql_frida, 0);
+    if (MySQL_get_n_rows(mysql_myequ_jewel) == 1) {
+        if (MySQL_fetch(mysql_myequ_jewel)) {
+            exit = api_MySQL_get_int(mysql_myequ_jewel, 0);
         }
     }
     return exit;
 }
 function save_equiment_socket(socket_data, id) {//0代表保存失败 成功返回1
-    if (api_MySQL_exec(mysql_frida, 'UPDATE data SET jewel_data = 0x' + socket_data + ' WHERE equ_id = ' + id + ';') == 1) {
+    if (api_MySQL_exec(mysql_myequ_jewel, 'UPDATE data SET jewel_data = 0x' + socket_data + ' WHERE equ_id = ' + id + ';') == 1) {
         return 1;
     }
     return 0;
@@ -199,11 +199,11 @@ function add_equiment_socket(equipment_type) {//0代表开孔失败 成功返回
             break;
     }
     var date = get_timestamp();
-    if (api_MySQL_exec(mysql_frida, 'INSERT INTO data (andonglishanbai_flag,jewel_data,date) VALUES(1,0x' + DB_JewelsocketData + ',\'' + date + '\');') == 1) {
-        api_MySQL_exec(mysql_frida, 'SELECT equ_id FROM data where date = \'' + date + '\';')
-        if (MySQL_get_n_rows(mysql_frida) == 1) {
-            if (MySQL_fetch(mysql_frida)) {
-                return api_MySQL_get_int(mysql_frida, 0);
+    if (api_MySQL_exec(mysql_myequ_jewel, 'INSERT INTO data (andonglishanbai_flag,jewel_data,date) VALUES(1,0x' + DB_JewelsocketData + ',\'' + date + '\');') == 1) {
+        api_MySQL_exec(mysql_myequ_jewel, 'SELECT equ_id FROM data where date = \'' + date + '\';')
+        if (MySQL_get_n_rows(mysql_myequ_jewel) == 1) {
+            if (MySQL_fetch(mysql_myequ_jewel)) {
+                return api_MySQL_get_int(mysql_myequ_jewel, 0);
             }
         }
     }
@@ -272,7 +272,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
     Interceptor.replace(ptr(0x08641A6A), new NativeCallback(function (CTitleBook, PacketGuard, a3, Inven_Item) {
         var JewelSocketData = Memory.alloc(30);
         var ret = CTitleBook_putItemData(CTitleBook, PacketGuard, a3, Inven_Item);
-        JewelSocketData = api_get_jewel_socket_data(mysql_frida, Inven_Item.add(25).readU32())
+        JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, Inven_Item.add(25).readU32())
         if (JewelSocketData.add(0).readU8() != 0) {
             InterfacePacketBuf_put_binary(PacketGuard, JewelSocketData, 30);
             return ret;
@@ -369,7 +369,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
 
                     var id = equipment.add(25).readU32();
                     var JewelSocketData = Memory.alloc(30);//空字节数据
-                    JewelSocketData = api_get_jewel_socket_data(mysql_frida, id)//取出原有的孔位以及徽章数据
+                    JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, id)//取出原有的孔位以及徽章数据
                     if (JewelSocketData.isNull()) {//为空则不进行镶嵌
                         return;
                     }
@@ -548,7 +548,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
         var ret = InterfacePacketBuf_put_packet(PacketBuf, Inven_Item);
         if (Inven_Item.add(1).readU8() == 1) {
             var JewelSocketData = Memory.alloc(30);
-            JewelSocketData = api_get_jewel_socket_data(mysql_frida, Inven_Item.add(25).readU32())
+            JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, Inven_Item.add(25).readU32())
             if (JewelSocketData.add(0).readU8() != 0) {
                 InterfacePacketBuf_put_binary(PacketBuf, JewelSocketData, 30);
                 return ret;
@@ -566,7 +566,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
             var item = CDataManager_find_item(G_CDataManager(), item_id);
             var item_groupname = CItem_getItemGroupName(item)
             if (item_groupname > 0 && item_groupname < 59) {//1-58是装备
-                JewelSocketData = api_get_jewel_socket_data(mysql_frida, src.add(59 + i * 117).readU32())
+                JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, src.add(59 + i * 117).readU32())
                 Memory.copy(src.add(89 + i * 117), JewelSocketData, 30);
             }
         }
@@ -583,7 +583,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
             var item = CDataManager_find_item(G_CDataManager(), item_id);
             var item_groupname = CItem_getItemGroupName(item)
             if (item_groupname > 0 && item_groupname < 59) {//1-58是装备
-                JewelSocketData = api_get_jewel_socket_data(mysql_frida, src.add(76 + i * 137).readU32())
+                JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, src.add(76 + i * 137).readU32())
                 Memory.copy(src.add(106 + i * 137), JewelSocketData, 30);
             }
         }
@@ -600,7 +600,7 @@ function andonglishanbai_Equipment_inlay() {//装备镶嵌
             var item = CDataManager_find_item(G_CDataManager(), item_id);
             var item_groupname = CItem_getItemGroupName(item)
             if (item_groupname > 0 && item_groupname < 59) {//1-58是装备
-                JewelSocketData = api_get_jewel_socket_data(mysql_frida, src.add(68 + i * 125).readU32())
+                JewelSocketData = api_get_jewel_socket_data(mysql_myequ_jewel, src.add(68 + i * 125).readU32())
                 Memory.copy(src.add(98 + i * 125), JewelSocketData, 30);
             }
         }
@@ -736,6 +736,7 @@ var uncompress_zip = new NativeFunction(ptr(0x86B2102), 'int', ['pointer', 'poin
 var MySQL_set_query_3_ptr = new NativeFunction(ptr(0x83F41C0), 'int', ['pointer', 'pointer', 'pointer'], { "abi": "sysv" });
 var mysql_taiwan_cain = null;
 var mysql_taiwan_cain_2nd = null;
+var mysql_myequ_jewel = null;
 var mysql_frida = null;
 //打开数据库
 function api_MYSQL_open(db_name, db_ip, db_port, db_account, db_password) {
@@ -831,15 +832,21 @@ function init_db() {
         mysql_taiwan_cain_2nd = api_MYSQL_open('taiwan_cain_2nd', '127.0.0.1', 3306, 'game', 'uu5!^%jg');
     }
     api_MySQL_exec(mysql_taiwan_cain, 'create database if not exists myequ_jewel default charset utf8;');
-    if (mysql_frida == null) {
-        mysql_frida = api_MYSQL_open('myequ_jewel', '127.0.0.1', 3306, 'game', 'uu5!^%jg');
+    if (mysql_myequ_jewel == null) {
+        mysql_myequ_jewel = api_MYSQL_open('myequ_jewel', '127.0.0.1', 3306, 'game', 'uu5!^%jg');
     }
 
-    api_MySQL_exec(mysql_frida, 'CREATE TABLE data (\
+    api_MySQL_exec(mysql_myequ_jewel, 'CREATE TABLE data (\
         equ_id int(11) AUTO_INCREMENT, jewel_data blob NOT NULL,andonglishanbai_flag int(11),date datetime,\
         PRIMARY KEY  (equ_id)\
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8,AUTO_INCREMENT = 150;');//创建数据库，排序从150开始，也可以从大一点的数值开始
 
+    //拍卖行/金币寄售自动化: 建 frida 库 + 打开连接 + 启动消费者模块(见下方消费者模块)
+    api_MySQL_exec(mysql_taiwan_cain, 'create database if not exists frida default charset utf8;');
+    if (mysql_frida == null) {
+        mysql_frida = api_MYSQL_open('frida', '127.0.0.1', 3306, 'game', 'uu5!^%jg');
+    }
+    auction_module_init();
 }
 //关闭数据库（卸载插件前调用）
 function uninit_db() {
@@ -849,6 +856,10 @@ function uninit_db() {
         mysql_taiwan_cain = null;
     }
 
+    if (mysql_myequ_jewel) {
+        MySQL_close(mysql_myequ_jewel);
+        mysql_myequ_jewel = null;
+    }
     if (mysql_frida) {
         MySQL_close(mysql_frida);
         mysql_frida = null;
@@ -1304,6 +1315,296 @@ function awake() {
             start();
         }
     });
+}
+
+/* ===== 拍卖行/金币寄售自动化: 追加符号与消费者模块 ==================================
+ * 自 dnf-market-agent 项目移植(与编排脚本 market_agent.py 通过 frida.pending_mail 对接).
+ * 本脚本未定义的符号/辅助函数补齐如下(124/124 地址与本服 df_game_r 一致):
+ * ============================================================================ */
+//获取GameWorld实例
+var G_GameWorld = new NativeFunction(ptr(0x80DA3A7), 'pointer', [], { "abi": "sysv" });
+//将协议发给全频道在线玩家(state 参数=3 时只发给 state>=3 的玩家)
+var GameWorld_send_all_with_state = new NativeFunction(ptr(0x86C9184), 'int', ['pointer', 'pointer', 'int'], { "abi": "sysv" });
+//在线玩家列表(用于std::map遍历)
+var gameworld_user_map_begin = new NativeFunction(ptr(0x80F78A6), 'int', ['pointer', 'pointer'], { "abi": "sysv" });
+var gameworld_user_map_end = new NativeFunction(ptr(0x80F78CC), 'int', ['pointer', 'pointer'], { "abi": "sysv" });
+var gameworld_user_map_not_equal = new NativeFunction(ptr(0x80F78F2), 'bool', ['pointer', 'pointer'], { "abi": "sysv" });
+var gameworld_user_map_get = new NativeFunction(ptr(0x80F7944), 'pointer', ['pointer'], { "abi": "sysv" });
+var gameworld_user_map_next = new NativeFunction(ptr(0x80F7906), 'pointer', ['pointer', 'pointer'], { "abi": "sysv" });
+//Inven_Item 构造(清空背包槽结构)/取道具编号/取角色ServerGroup
+var Inven_Item = new NativeFunction(ptr(0x080CB854), 'void', ['pointer'], { "abi": "sysv" });
+var GetItem_index = new NativeFunction(ptr(0x08110C48), 'int', ['pointer'], { "abi": "sysv" });
+var GetServerGroup = new NativeFunction(ptr(0x080CBC90), 'int', ['pointer'], { "abi": "sysv" });
+//发系统邮件(单道具)
+var ReqDBSendNewSystemMail = new NativeFunction(ptr(0x085555E8), 'int', ['pointer', 'pointer', 'int', 'int', 'pointer', 'int', 'int', 'int', 'char', 'char'], { "abi": "sysv" });
+//服务器环境/当前频道名
+var G_CEnvironment = new NativeFunction(ptr(0x080CC181), 'pointer', [], { "abi": "sysv" });
+var CEnvironment_get_file_name = new NativeFunction(ptr(0x80DA39A), 'pointer', ['pointer'], { "abi": "sysv" });
+function api_CEnvironment_get_file_name()
+{
+    var filename = CEnvironment_get_file_name(G_CEnvironment());
+    return filename.readUtf8String(-1);
+}
+//获取道具数据
+function find_item(item_id)
+{
+    return CDataManager_find_item(G_CDataManager(), item_id);
+}
+
+/* ===== 拍卖行自动化消费者模块(追加) ============================================
+ * 与编排脚本 market_agent.py 通过 frida.pending_mail 对接.
+ * 复用本脚本已有的 MySQL层 / 主线程调度 / gameworld 用户表遍历 / ReqDBSendNewSystemMail 等
+ * (124/124 地址已校验一致). 中文不用 TextEncoder/TextDecoder, 走 get_binary+readUtf8String.
+ * 接线: init_db() 末尾已调用 auction_module_init().
+ * ============================================================================ */
+var PENDING_MAIL_POLL_INTERVAL = 60000;
+// 离线兜底宽限(秒): 必须 > 轮询间隔/1000, 确保各频道都至少轮询一次、玩家所在频道先在线认领;
+// 之后仍 status=0 才判定"玩家各频道都不在线"走离线落库. 多频道时这是避免误判离线的关键.
+var PENDING_MAIL_OFFLINE_GRACE_SEC = 120;
+
+// 本 frida 实例(频道)唯一标识, 用作原子认领的 claimed_by; 多频道并发处理同一队列时区分赢家.
+var _mail_worker_id = null;
+function mail_worker_id() {
+    if (_mail_worker_id == null) {
+        var wid = 'unknown';
+        try { wid = '' + api_CEnvironment_get_file_name(); } catch (e) {}
+        _mail_worker_id = (wid.replace(/[^A-Za-z0-9_]/g, '').substring(0, 32)) || 'unknown';  // 频道名, 防注入
+    }
+    return _mail_worker_id;
+}
+
+function auction_log(m) {
+    try { if (typeof log === 'function') { log('[auction] ' + m); return; } } catch (e) {}
+    try { console.log('[auction] ' + m); } catch (e) {}
+}
+
+// 原子认领一封待发邮件: status 0->1 由 InnoDB 行锁串行化, 多频道里只有一个 UPDATE 真正改成功;
+// 回读 claimed_by 确认本 worker 是否赢得 -> 杜绝多频道双发. 返回 true=本 worker 认领成功.
+function api_pmail_try_claim(id) {
+    var wid = mail_worker_id();
+    if (!api_MySQL_exec(mysql_frida,
+        "UPDATE pending_mail SET status=1, claimed_by='" + wid + "' WHERE id=" + id + " AND status=0;")) return false;
+    if (!api_MySQL_exec(mysql_frida, "SELECT claimed_by FROM pending_mail WHERE id=" + id + ";")) return false;
+    if (MySQL_get_n_rows(mysql_frida) < 1 || MySQL_fetch(mysql_frida) != 1) return false;
+    return api_MySQL_get_str(mysql_frida, 0) === wid;
+}
+// 发信失败时退回 status=0, 让本轮/其它频道重试(不吞单).
+function api_pmail_unclaim(id) {
+    api_MySQL_exec(mysql_frida, "UPDATE pending_mail SET status=0, claimed_by=NULL WHERE id=" + id + ";");
+}
+
+function api_pmail_get_raw(mysql, field_index) {
+    var len = MySQL_get_binary_length(mysql, field_index);
+    if (len <= 0) return null;
+    var buf = Memory.alloc(len + 1);
+    if (1 != MySQL_get_binary(mysql, field_index, buf, len)) return null;
+    buf.add(len).writeU8(0);
+    return { ptr: buf, len: len };
+}
+
+function api_pmail_find_online(charac_no) {
+    var it = api_gameworld_user_map_begin();
+    var end = api_gameworld_user_map_end();
+    while (gameworld_user_map_not_equal(it, end)) {
+        var u = api_gameworld_user_map_get(it);
+        if (CUser_get_state(u) >= 3 && CUserCharacInfo_getCurCharacNo(u) == charac_no) return u;
+        api_gameworld_user_map_next(it);
+    }
+    return null;
+}
+
+function api_pmail_send_online(user, charac_no, title_raw, text_raw, gold) {
+    var ServerGroup = GetServerGroup(user);
+    var inven = Memory.alloc(100);
+    Inven_Item(inven);
+    // 第7参 MailDate = 邮件保留天数(实测 0 非无限制, 沿用 30); 通知由调用方按玩家去重统一发, 此处不发.
+    ReqDBSendNewSystemMail(title_raw.ptr, inven, gold, charac_no, text_raw.ptr, text_raw.len, 30, ServerGroup, 0, 0);
+}
+
+// 在线发"物品邮件"(金币寄售回收的代币券): inven 装代币券道具(标记 item_id), 数量走 gold 参数(=postal.gold 列,
+// 与 offline/数据库一致); 在线玩家即时收到. 装包方式复刻 CMailBoxHelperReqDBSendNewSystemMail;
+// 找不到物品模板则返回 false, 由调用方回退 offline 写库. 通知由调用方按市场去重统一发.
+function api_pmail_send_online_item(user, charac_no, title_raw, text_raw, item_id, count) {
+    var retitem = find_item(item_id);
+    if (!retitem) return false;
+    var ServerGroup = GetServerGroup(user);
+    var inven = Memory.alloc(100);
+    Inven_Item(inven);                       // 清空 inven
+    var itemid = GetItem_index(retitem);
+    var itemtype = retitem.add(8).readU8();
+    inven.writeU8(itemtype);
+    inven.add(2).writeInt(itemid);
+    // 代币券是货币物品(unlimit): 数量走 gold 参数(=postal.gold 列, 与 offline/数据库一致), inven 不写 count(add_info=0).
+    // 通知由调用方按玩家去重统一发, 此处不发.
+    ReqDBSendNewSystemMail(title_raw.ptr, inven, count, charac_no, text_raw.ptr, text_raw.len, 30, ServerGroup, 0, 0);
+    return true;
+}
+
+function bytes_to_hex(p, len) {
+    var h = '';
+    for (var i = 0; i < len; i++) { var b = p.add(i).readU8(); h += (b < 16 ? '0' : '') + b.toString(16); }
+    return h;
+}
+// name_hex/text_hex = 客户端编码(本服UTF-8)原始字节的 hex. CONVERT(UNHEX(..) USING latin1) 让字节按 latin1 进 utf8 列,
+// 存储形态与游戏原生写入一致; 游戏(latin1连接)读出即原始字节 -> 客户端正确显示. 本函数编码无关, 只搬字节, 也无需转义引号.
+// 邮件落库. 列含义(实测): gold = 金币(原生 type=5 成交邮件 gold=10000=押金金币);
+//   add_info = 普通物品堆叠数; 货币物品(代币券 unlimit_flag=1)的"数量"走 gold 列(实测正常发放).
+//   金币邮件: gold=金币数, item_id=0, mail_type=0.
+//   代币券邮件: item_id=2681762, mail_type=5, gold=代币券数量, add_info=0.
+// letter_id 由 AUTO_INCREMENT 分配(与游戏原生发信一致): 手动 MAX+1 会与原生/已删邮件 letter_id 撞车
+//   -> 一封信挂两个附件(曾致代币券邮件混入天价金币). 用 LAST_INSERT_ID() 取回自增值.
+function api_pmail_send_offline(charac_no, name_hex, text_hex, gold, item_id, mail_type, add_info) {
+    if (typeof mysql_taiwan_cain_2nd === 'undefined' || mysql_taiwan_cain_2nd == null) return false;
+    item_id = item_id || 0;
+    mail_type = mail_type || 0;
+    add_info = add_info || 0;
+    var now = new Date();
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    var t = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' +
+            pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    var nm = "CONVERT(UNHEX('" + name_hex + "') USING latin1)";
+    var tx = "CONVERT(UNHEX('" + text_hex + "') USING latin1)";
+    // letter 自增主键: 不指定 letter_id, 由 DB 分配, 再用 LAST_INSERT_ID() 取回
+    if (!api_MySQL_exec(mysql_taiwan_cain_2nd,
+        "INSERT INTO letter (charac_no,send_charac_no,send_charac_name,letter_text,reg_date,stat) VALUES (" +
+        charac_no + ",0," + nm + "," + tx + ",'" + t + "',1)")) return false;
+    var lid = 0;
+    if (api_MySQL_exec(mysql_taiwan_cain_2nd, "SELECT LAST_INSERT_ID() AS m")) {
+        if (MySQL_get_n_rows(mysql_taiwan_cain_2nd) > 0 && MySQL_fetch(mysql_taiwan_cain_2nd) == 1)
+            lid = parseInt(api_MySQL_get_str(mysql_taiwan_cain_2nd, 0), 10) || 0;
+    }
+    if (lid <= 0) { auction_log('offline: 取 letter_id 失败, 放弃发信'); return false; }
+    api_MySQL_exec(mysql_taiwan_cain_2nd,
+        "INSERT INTO postal (occ_time,send_charac_no,send_charac_name,receive_charac_no,item_id,add_info,upgrade," +
+        "amplify_option,gold,receive_time,unlimit_flag,letter_id,type) VALUES ('" +
+        t + "',0," + nm + "," + charac_no + "," + item_id + "," + add_info + ",0,0," + (gold || 0) + ",'" + t + "',1," + lid + "," + mail_type + ")");
+    return true;
+}
+
+// 代币券物品邮件的 item_id(金币寄售回收), postal.type 复刻游戏原生金币寄售成交邮件
+var PMAIL_TOKEN_ITEM = 2681762;
+var PMAIL_TOKEN_TYPE = 5;
+// 多频道安全: 每个频道的 df_game_r 都注入一份 frida, 同抢一个 pending_mail 队列, 且"在线判断/在线发信/通知"
+// 都只能针对【本频道】玩家. 故分两阶段:
+//   阶段1(所有频道): 只处理"在本频道在线"的玩家 -> 原子认领后在线发信+通知; 不在本频道的留给别的频道.
+//   阶段2(离线兜底): 超过宽限期仍 status=0 = 各频道都没在线认领 = 玩家各频道都不在线 -> 任一频道认领后离线落库.
+// 原子认领防多频道双发; 宽限期(>轮询间隔)确保在线频道先于离线兜底处理, 避免在线玩家被误判离线.
+function process_pending_auction_mail() {
+    if (typeof mysql_frida === 'undefined' || mysql_frida == null) { auction_log('poll: mysql_frida null'); return; }
+    // 阶段1: 在线投递(本频道在线玩家)
+    process_mail_batch('SELECT id, charac_no, title, text, gold, item_id, market FROM pending_mail WHERE status=0 ORDER BY id LIMIT 20;', false);
+    // 阶段2: 离线兜底(超过宽限期没被任何在线频道认领)
+    process_mail_batch('SELECT id, charac_no, title, text, gold, item_id, market FROM pending_mail WHERE status=0 AND ' +
+        '(created_at IS NULL OR created_at < NOW() - INTERVAL ' + PENDING_MAIL_OFFLINE_GRACE_SEC + ' SECOND) ORDER BY id LIMIT 20;', true);
+}
+
+function process_mail_batch(sql, offlineFallback) {
+    // item_id 列: 0=金币邮件(在线原生发/离线写库), 非0=物品邮件(代币券, 统一写库)
+    if (!api_MySQL_exec(mysql_frida, sql)) { auction_log('poll: select failed'); return; }
+    var n = MySQL_get_n_rows(mysql_frida), recs = [], i;
+    for (i = 0; i < n; i++) {        // 必须先把结果集读完再发信(发信会复用 mysql_frida 句柄, 冲掉结果集)
+        if (MySQL_fetch(mysql_frida) != 1) break;
+        var id = api_MySQL_get_int(mysql_frida, 0);
+        var charac_no = api_MySQL_get_int(mysql_frida, 1);
+        var title_raw = api_pmail_get_raw(mysql_frida, 2);
+        var text_raw = api_pmail_get_raw(mysql_frida, 3);
+        var gold = api_MySQL_get_int(mysql_frida, 4);
+        var item_id = api_MySQL_get_int(mysql_frida, 5);
+        var market = api_MySQL_get_str(mysql_frida, 6);
+        if (id == null || charac_no == null || gold == null || !title_raw || !text_raw) continue;
+        recs.push({ id: id, charac_no: charac_no, title_raw: title_raw, text_raw: text_raw, gold: gold, item_id: (item_id || 0), market: (market || 'auction') });
+    }
+    if (recs.length > 0) auction_log((offlineFallback ? 'poll-offline: ' : 'poll: ') + recs.length + ' @' + mail_worker_id());
+    var notified = {};                       // charac_no -> 已弹通知; 同一玩家本轮多封回收邮件只通知一次
+    for (i = 0; i < recs.length; i++) {
+        var r = recs[i];
+        try {
+            var onlineUser = api_pmail_find_online(r.charac_no);      // 仅本频道
+            // 阶段1: 玩家不在本频道在线 -> 不处理, 留给玩家所在频道(或宽限后离线兜底)
+            if (!offlineFallback && !onlineUser) continue;
+            // 原子认领: 没抢到 = 别的频道已处理 -> 跳过
+            if (!api_pmail_try_claim(r.id)) continue;
+            var mode, ok = false;
+            try {
+                if (r.item_id && r.item_id != 0) {
+                    // 代币券邮件(物品): 在线走原生发信(道具装 inven, 数量走 gold), 否则离线写库(gold 列承载数量)
+                    if (onlineUser && api_pmail_send_online_item(onlineUser, r.charac_no, r.title_raw, r.text_raw, r.item_id, r.gold)) {
+                        mode = ' [item-online:' + r.item_id + ' x' + r.gold + ']'; ok = true;
+                    } else {
+                        ok = api_pmail_send_offline(r.charac_no,
+                            bytes_to_hex(r.title_raw.ptr, r.title_raw.len),
+                            bytes_to_hex(r.text_raw.ptr, r.text_raw.len), r.gold, r.item_id, PMAIL_TOKEN_TYPE);
+                        mode = (onlineUser ? ' [item-offline(fallback):' : ' [item-offline:') + r.item_id + ' x' + r.gold + ']';
+                    }
+                } else {
+                    // 金币邮件: 在线走原生 ReqDBSendNewSystemMail, 离线才写库
+                    if (onlineUser) { api_pmail_send_online(onlineUser, r.charac_no, r.title_raw, r.text_raw, r.gold); ok = true; }
+                    else { ok = api_pmail_send_offline(r.charac_no,
+                        bytes_to_hex(r.title_raw.ptr, r.title_raw.len),
+                        bytes_to_hex(r.text_raw.ptr, r.text_raw.len), r.gold, 0, 0); }
+                    mode = onlineUser ? ' [online]' : ' [offline]';
+                }
+            } catch (e) { auction_log('send err id=' + r.id + ' ' + e); ok = false; }
+            if (!ok) { api_pmail_unclaim(r.id); auction_log('send fail id=' + r.id + ' -> 退回 status=0 重试'); continue; }
+            // 同一玩家、同一市场本轮多封回收邮件只弹一次通知(拍卖行/金币寄售各一次); 通知必在玩家所在频道
+            var nkey = r.market + ':' + r.charac_no;
+            if (onlineUser && !notified[nkey]) {
+                var ntext = (r.market === 'cera') ? '您寄售的金币已被系统回收，请查收邮件' : '您在拍卖行的商品已被系统回收，请查收邮件';
+                try { api_CUser_SendNotiPacketMessage(onlineUser, ntext, 0); } catch (e) {}
+                notified[nkey] = true;
+            }
+            auction_log('sent id=' + r.id + ' charac=' + r.charac_no + ' gold=' + r.gold + ' @' + mail_worker_id() + mode);
+        } catch (e) {
+            auction_log('proc fail id=' + r.id + ' err=' + e);
+        }
+    }
+}
+
+// 不依赖 setTimeout(嵌入式 frida 运行时常不 pump JS 事件循环, setTimeout 会静默不触发);
+// 改挂在每 tick 必触发的 TimerDispatcher::dispatch(@0x8632A18, 与 stock 同址, Interceptor.attach 可多监听器共存)
+// 的 onLeave(主线程) 上, 按墙钟时间驱动轮询与整点广播.
+var _pmail_last_ms = 0;
+var _prenotify_last_hour = -1;
+var _auction_tick_hooked = false;
+function auction_dispatch_tick() {
+    var d = new Date();
+    var now = d.getTime();
+    if (now - _pmail_last_ms >= PENDING_MAIL_POLL_INTERVAL) {
+        _pmail_last_ms = now;
+        try { process_pending_auction_mail(); } catch (e) { auction_log('poll err=' + e); }
+    }
+    if (d.getMinutes() === 59 && _prenotify_last_hour !== d.getHours()) {
+        _prenotify_last_hour = d.getHours();
+        try { api_GameWorld_SendNotiPacketMessage('注意：拍卖行/金币寄售即将重启，重启完成前请尽量避免交易', 0); } catch (e) {}
+    }
+}
+
+function auction_module_init() {
+    if (typeof mysql_frida !== 'undefined' && mysql_frida != null) {
+        api_MySQL_exec(mysql_frida,
+            // title/text 用 VARBINARY: 编排脚本写入原始 UTF-8 字节, 不能落进会做 utf8 校验的 VARCHAR(否则被损坏/转码).
+            // 与 market_agent.py init 的列定义保持一致(VARBINARY 192/765 = 64/255 字符 * utf8 最大 3 字节).
+            // market 区分市场(auction/cera), item_id 标记物品邮件(0金币/2681762代币券); 幂等键 (market,auction_id,occ_time).
+            // 与 market_agent.py init 的最优结构一致(init 会 DROP 重建); 此处 CREATE IF NOT EXISTS 仅作 init 未跑时兜底.
+            "CREATE TABLE IF NOT EXISTS pending_mail (id INT AUTO_INCREMENT PRIMARY KEY, market VARCHAR(16) NOT NULL DEFAULT 'auction'," +
+            " auction_id BIGINT DEFAULT NULL, occ_time DATETIME NULL, charac_no INT NOT NULL, title VARBINARY(192) NOT NULL," +
+            " text VARBINARY(765) NOT NULL, gold INT NOT NULL DEFAULT 0, item_id INT NOT NULL DEFAULT 0, status TINYINT NOT NULL DEFAULT 0," +
+            " created_at DATETIME NULL, claimed_by VARCHAR(40) DEFAULT NULL, UNIQUE KEY uniq_listing (market, auction_id, occ_time), KEY idx_status (status)) ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+        // 自愈: 旧表(无 claimed_by)补列, 供多频道原子认领用; 列已存在则 ALTER 报错被忽略(不抛).
+        api_MySQL_exec(mysql_frida, "ALTER TABLE pending_mail ADD COLUMN claimed_by VARCHAR(40) DEFAULT NULL;");
+        api_MySQL_exec(mysql_frida,
+            // restock_list = 补货列表(原 auction_whitelist, 已与回收解耦; 回收走 item_catalog+config 规则)
+            "CREATE TABLE IF NOT EXISTS restock_list (item_id INT UNSIGNED NOT NULL PRIMARY KEY, cname VARCHAR(64) DEFAULT NULL," +
+            " system_price INT NOT NULL, quantity INT NOT NULL DEFAULT 1, stack_size INT NOT NULL DEFAULT 1," +
+            " upgrade TINYINT UNSIGNED DEFAULT 0, endurance SMALLINT UNSIGNED DEFAULT 35, seal_flag TINYINT UNSIGNED DEFAULT 1)" +
+            " ENGINE=InnoDB DEFAULT CHARSET=utf8;");
+    }
+    // 挂到与 stock 同一个 TimerDispatcher::dispatch(@0x8632A18); onLeave 在主线程, 直接驱动, 不经 setTimeout.
+    if (!_auction_tick_hooked) {
+        _auction_tick_hooked = true;
+        Interceptor.attach(ptr(0x8632A18), { onLeave: function (r) { auction_dispatch_tick(); } });
+    }
+    auction_log('module loaded (tick-driven, poll=' + PENDING_MAIL_POLL_INTERVAL + 'ms)');
 }
 
 //框架入口

@@ -29,6 +29,8 @@ if [ ! $error_code -eq 0 ]; then
   echo "init server group db failed!!!!!"
   exit -1
 fi
+# 初始化拍卖行/金币寄售自动做市(market_agent, 幂等)
+bash /home/template/init/market_agent/setup_market_agent.sh
 # 判断Script.pvf文件是否初始化过
 if [ ! -f "/data/Script.pvf" ];then
   tar -zxvf /home/template/init/Script.tgz -C /home/template/init/
