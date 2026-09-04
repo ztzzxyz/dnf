@@ -125,6 +125,8 @@ mkdir -p /data/conf.d
 # 创建DP目录
 mkdir -p /data/dp
 ln -s /data/dp /dp2
+# 创建FR(frida)目录
+mkdir -p /data/frida
 # 创建日志目录
 mkdir -p /data/log
 mkdir -p /data/log/netbird
