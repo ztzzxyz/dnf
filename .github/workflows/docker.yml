@@ -1,0 +1,112 @@
+name: ci
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Tag to run the workflow on'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: build-${{ matrix.os }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: Centos6
+            dockerfile: build/Centos6-DNF/Dockerfile
+          - os: centos7
+            dockerfile: build/Centos7-DNF/Dockerfile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download Script from Release
+        shell: bash
+        run: |
+            # 使用 GitHub CLI 获取 Script 最新 release 的下载链接
+            RELEASE_URL=$(gh release view --repo ztzzxyz/dnf --json assets --jq '.assets[] | select(.name | endswith(".tgz")) | .url')
+            
+            echo "Downloading HDT from: $RELEASE_URL"
+            curl -L "$RELEASE_URL" -o build/dnf_data/home/template/init/Script.tgz
+            ls -l build/dnf_data/home/template/init/Script.tgz
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          GHCR_IMAGE="ghcr.io/ztzzxyz/dnf"
+          OS="${{ matrix.os }}"
+
+          IS_RELEASE=false
+          if [ "${{ github.event_name }}" == "release" ]; then
+            IS_RELEASE=true
+            DATE=$(echo "${{ github.event.release.tag_name }}" | sed 's/^Release-//')
+            TAG="${OS}-70s3a3-${DATE}"
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tags }}" ]; then
+            IS_RELEASE=true
+            DATE=$(echo "${{ github.event.inputs.tags }}" | sed 's/^Release-//')
+            TAG="${OS}-70s3a3-${DATE}"
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            TAG="${OS}-70s3a3-dev-${SHORT_SHA}"
+          fi
+
+          TAGS="${GHCR_IMAGE}:${TAG}"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "is_release=${IS_RELEASE}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: true
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.os }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.os }}
+
+      - name: Tag latest
+        run: |
+          TAG="${{ steps.tags.outputs.image_tag }}"
+          if [ "${{ steps.tags.outputs.is_release }}" == "true" ]; then
+            LATEST="${{ matrix.os }}-70s3a3-latest"
+          else
+            LATEST="${{ matrix.os }}-70s3a3-dev-latest"
+          fi
+          IMAGES=(
+            "ghcr.io/ztzzxyz/dnf"
+          )
+          for IMAGE in "${IMAGES[@]}"; do
+            docker buildx imagetools create --tag "${IMAGE}:${LATEST}" "${IMAGE}:${TAG}"
+          done

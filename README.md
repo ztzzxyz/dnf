@@ -221,6 +221,16 @@ docker restart dnf
 
 [点击查看更多部署方式](doc/OtherDeploy.md)
 
+## 拍卖行自动补货工具
+
+集成社区分享的拍卖行管理工具，定时扫描并按概率回收玩家低价上架物品、按目标自动补货上架系统商品、通过游戏邮件返还回收金币（默认关闭，仅centos7镜像可用）：
+
+```shell
+docker run -d -e AUCTION_TOOL_ENABLE=true ... 1995chen/dnf:centos7-xxxx
+```
+
+[点击查看拍卖行工具详细文档](doc/AuctionTool.md)
+
 ## 如何构建自定义镜像
 
 该项目已经接入 CircleCI，您在本项目的任意分支提交代码均会触发镜像构建。镜像的版本为本次提交commit-id的前7位。

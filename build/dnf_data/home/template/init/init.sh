@@ -50,18 +50,18 @@ fi
 
 # 判断privatekey.pem文件是否初始化过
 if [ ! -f "/data/privatekey.pem" ];then
-  # 拷贝版本文件到持久化目录
-  cp /home/template/init/privatekey.pem /data/
-  echo "init privatekey.pem success"
+  # 首次初始化时生成全新的RSA 2048位密钥对
+  openssl genrsa -out /data/privatekey.pem 2048
+  openssl rsa -in /data/privatekey.pem -pubout -out /data/publickey.pem
+  echo "init privatekey.pem and publickey.pem success (newly generated)"
 else
   echo "privatekey.pem have already inited, do nothing!"
 fi
 
-# 判断publickey.pem文件是否初始化过
+# 若私钥已存在但公钥缺失，从私钥派生公钥
 if [ ! -f "/data/publickey.pem" ];then
-  # 拷贝版本文件到持久化目录
-  cp /home/template/init/publickey.pem /data/
-  echo "init publickey.pem success"
+  openssl rsa -in /data/privatekey.pem -pubout -out /data/publickey.pem
+  echo "init publickey.pem success (derived from existing privatekey.pem)"
 else
   echo "publickey.pem have already inited, do nothing!"
 fi
@@ -81,6 +81,29 @@ if [ ! -f "/data/dp/libhook.so" ];then
   echo "init libhook.so success"
 else
   echo "libhook.so have already inited, do nothing!"
+fi
+
+# 判断FR的frida.js是否初始化过[挂载到/data/frida以便宿主机直接修改]
+if [ ! -f "/data/frida/frida.js" ];then
+  mkdir -p /data/frida
+  cp /home/template/init/frida.js /data/frida/
+  echo "init frida.js success"
+else
+  echo "frida.js have already inited, do nothing!"
+fi
+
+# 判断拍卖行补货工具是否初始化过[挂载到/data/auction以便宿主机直接修改]
+# 注意: auction二进制需要centos7镜像(glibc >= 2.14)才能运行
+if [ ! -f "/data/auction/auction" ];then
+  mkdir -p /data/auction
+  cp /home/template/auction_tool/auction /data/auction/
+  cp /home/template/auction_tool/config.yaml /data/auction/
+  cp /home/template/auction_tool/items.csv /data/auction/
+  cp /home/template/auction_tool/readme.md /data/auction/
+  chmod 755 /data/auction/auction
+  echo "init auction_tool success"
+else
+  echo "auction_tool have already inited, do nothing!"
 fi
 
 # 重新生成channel配置文件[这里要重置下]

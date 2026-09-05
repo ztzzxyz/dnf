@@ -91,6 +91,8 @@ ENV NB_MANAGEMENT_URL=''
 # tailscale
 ENV TS_AUTH_KEY=''
 ENV TS_LOGIN_SERVER='https://controlplane.tailscale.com'
+# 拍卖行自动补货/回收工具(仅centos7镜像可用, glibc >= 2.14)
+ENV AUCTION_TOOL_ENABLE=false
 
 # 覆盖添加目录
 COPY build/dnf_data/ /

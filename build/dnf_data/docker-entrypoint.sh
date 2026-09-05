@@ -36,6 +36,7 @@ export OPEN_CHANNEL=$(echo $OPEN_CHANNEL | sed "s/[\'\"]//g")
 export DDNS_ENABLE=$(echo $DDNS_ENABLE | sed "s/[\'\"]//g")
 export DDNS_DOMAIN=$(echo $DDNS_DOMAIN | sed "s/[\'\"]//g")
 export DDNS_INTERVAL=$(echo $DDNS_INTERVAL | sed "s/[\'\"]//g")
+export AUCTION_TOOL_ENABLE=$(echo $AUCTION_TOOL_ENABLE | sed "s/[\'\"]//g")
 export NB_SETUP_KEY=$(echo $NB_SETUP_KEY | sed "s/[\'\"]//g")
 export NB_MANAGEMENT_URL=$(echo $NB_MANAGEMENT_URL | sed "s/[\'\"]//g")
 export CLIENT_POOL_SIZE="$(echo "${CLIENT_POOL_SIZE:-10}" | sed "s/[\'\"]//g")"
@@ -125,6 +126,8 @@ mkdir -p /data/conf.d
 # 创建DP目录
 mkdir -p /data/dp
 ln -s /data/dp /dp2
+# 创建FR(frida)目录
+mkdir -p /data/frida
 # 创建日志目录
 mkdir -p /data/log
 mkdir -p /data/log/netbird
@@ -203,11 +206,16 @@ sed -i "s/GM_ACCOUNT/$GM_ACCOUNT/g" `find /data -name "*.ini"`
 sed -i "s/GM_PASSWORD/$GM_PASSWORD/g" `find /data -name "*.ini"`
 sed -i "s/GM_CONNECT_KEY/$GM_CONNECT_KEY/g" `find /data -name "*.ini"`
 sed -i "s/GM_LANDER_VERSION/$GM_LANDER_VERSION/g" `find /data -name "*.ini"`
+# 替换拍卖行补货工具配置中的占位符[首次启动时生效, 之后用户修改的配置不会被覆盖]
+if [ -f "/data/auction/config.yaml" ];then
+  sed -i "s/GAME_PASSWORD/$DNF_DB_GAME_PASSWORD/g" /data/auction/config.yaml
+  sed -i "s/SERVER_GROUP_DB/$SERVER_GROUP_DB/g" /data/auction/config.yaml
+fi
 # 重设supervisor web网页密码
 sed -i "s/^username=.*/username=$WEB_USER/" /etc/supervisord.conf
 sed -i "s/^password=.*/password=$WEB_PASS/" /etc/supervisord.conf
 # 传递环境变量
-SUPERVISORD_ENV="MAIN_BRIDGE_IP=\"$MAIN_BRIDGE_IP\",SERVER_GROUP_NAME=\"$SERVER_GROUP_NAME\",SERVER_GROUP_DB=\"$SERVER_GROUP_DB\",CUR_MAIN_DB_HOST=\"$CUR_MAIN_DB_HOST\",CUR_MAIN_DB_PORT=\"$CUR_MAIN_DB_PORT\",CUR_SG_DB_HOST=\"$CUR_SG_DB_HOST\",CUR_SG_DB_PORT=\"$CUR_SG_DB_PORT\""
+SUPERVISORD_ENV="MAIN_BRIDGE_IP=\"$MAIN_BRIDGE_IP\",SERVER_GROUP_NAME=\"$SERVER_GROUP_NAME\",SERVER_GROUP_DB=\"$SERVER_GROUP_DB\",CUR_MAIN_DB_HOST=\"$CUR_MAIN_DB_HOST\",CUR_MAIN_DB_PORT=\"$CUR_MAIN_DB_PORT\",CUR_SG_DB_HOST=\"$CUR_SG_DB_HOST\",CUR_SG_DB_PORT=\"$CUR_SG_DB_PORT\",AUCTION_TOOL_ENABLE=\"$AUCTION_TOOL_ENABLE\""
 sed -i "s/^environment=.*/environment=$SUPERVISORD_ENV/" /etc/supervisord.conf
 # 切换到主目录
 cd /root

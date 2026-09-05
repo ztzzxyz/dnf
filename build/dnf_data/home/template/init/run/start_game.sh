@@ -43,7 +43,7 @@ echo "generate $channel_name.cfg success"
 # 清理cfg文件
 rm -rf /tmp/$channel_name.cfg
 # 启动服务
-old_pid=$(pgrep -f "df_game_r $channel_name start")
+old_pid=$(pgrep -f "df_game_r $channel_name")
 echo "ch.$channel_no old pid is $old_pid"
 if [ -n "$old_pid" ]; then
   echo "old pid not empty, kill $old_pid"
@@ -51,7 +51,9 @@ if [ -n "$old_pid" ]; then
 fi
 rm -rf pid/$channel_name.pid
 
-# 加载DP并启动[确保DP路径已经被正确映射]
-LD_PRELOAD=/dp2/libhook.so ./df_game_r $channel_name start
+# 加载DP及FR(frida)并启动[确保DP路径已经被正确映射]
+# 注意: 必须使用nofork模式前台启动. start模式会在daemon_init中fork守护进程(父进程退出),
+# 导致frida脚本随父进程dispose、start日志看似未打印; nofork模式不fork, frida与游戏同进程
+LD_PRELOAD="/dp2/libhook.so:/home/neople/game/frida.so" ./df_game_r $channel_name nofork
 sleep 2
 cat pid/$channel_name.pid |xargs -n1 -I{} tail --pid={} -f /dev/null
