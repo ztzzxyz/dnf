@@ -83,6 +83,15 @@ else
   echo "libhook.so have already inited, do nothing!"
 fi
 
+# 判断DP2插件是否初始化过[挂载在/data/dp, 容器内通过/dp2软链访问]
+if [ ! -f "/data/dp/libdp2.so" ];then
+  # 拷贝DP2插件文件到持久化目录
+  cp -r /home/template/init/dp2/* /data/dp/
+  echo "init dp2 success"
+else
+  echo "dp2 have already inited, do nothing!"
+fi
+
 # 重新生成channel配置文件[这里要重置下]
 rm -rf /etc/supervisor/conf.d/channel.conf
 cp /etc/supervisor/conf.d/channel.conf.template /etc/supervisor/conf.d/channel.conf
@@ -147,6 +156,20 @@ fi
 # 旧版本启用DofSlim需要先删除start_bridge.sh和start_channel.sh
 [ -f "/data/run/start_bridge.sh" ] && ! grep -q -e "^LD_PRELOAD=.*/home/template/init/bridge_hook.so" "/data/run/start_bridge.sh" && rm -f "/data/run/start_bridge.sh"
 [ -f "/data/run/start_channel.sh" ] && ! grep -q -e "^LD_PRELOAD=.*/home/template/init/channel_hook.so" "/data/run/start_channel.sh" && rm -f "/data/run/start_channel.sh"
+
+# 判断拍卖行补货工具是否初始化过[挂载在/data/auction以便宿主机直接修改]
+# 注意: auction二进制需要centos7镜像(glibc >= 2.14)才能运行
+if [ ! -f "/data/auction/auction" ];then
+  mkdir -p /data/auction
+  cp /home/template/auction_tool/auction /data/auction/
+  cp /home/template/auction_tool/config.yaml /data/auction/
+  cp /home/template/auction_tool/items.csv /data/auction/
+  cp /home/template/auction_tool/readme.md /data/auction/
+  chmod 755 /data/auction/auction
+  echo "init auction_tool success"
+else
+  echo "auction_tool have already inited, do nothing!"
+fi
 
 # 初始化所有run脚本
 for fp in "/home/template/init/run"/*.sh

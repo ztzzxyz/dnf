@@ -33,7 +33,6 @@ cp /tmp/channel.cfg /home/neople/channel/cfg/channel.cfg
 rm -rf /tmp/channel.cfg
 # 启动服务
 echo "starting channel..."
-# 加载DP并启动,该DP可以被自定义[确保DP路径已经被正确映射]
-LD_PRELOAD=/home/template/init/channel_hook.so:/dp2/libhook.so ./df_channel_r channel start
+LD_PRELOAD=/home/template/init/channel_hook.so:/home/template/init/libhook.so ./df_channel_r channel start
 sleep 2
 cat pid/*.pid |xargs -n1 -I{} tail --pid={} -f /dev/null

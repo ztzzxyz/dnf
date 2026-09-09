@@ -221,6 +221,21 @@ docker restart dnf
 
 [点击查看更多部署方式](doc/OtherDeploy.md)
 
+## 拍卖行自动补货工具
+
+集成社区分享的拍卖行管理工具，定时扫描并按概率回收玩家低价上架物品、按目标自动补货上架系统商品、通过游戏邮件返还回收金币（默认关闭，仅centos7镜像可用）：
+
+```shell
+docker run -d -e AUCTION_TOOL_ENABLE=true ... 1995chen/dnf:centos7-xxxx
+```
+
+[点击查看拍卖行工具详细文档](doc/AuctionTool.md)
+
+## DP2插件 & monitor插件
+
+* DP2插件已默认集成到镜像中(挂载于`/data/dp`, 容器内通过`/dp2`访问)，包含装备镶嵌、黑暗武士技能槽、幸运值爆率等功能，插件脚本位于`/data/dp/df_game_r.js`，可在宿主机直接修改后热重载。
+* monitor插件(libfd_monitor.so)已默认集成，随df_monitor_r进程加载，无需额外配置。
+
 ## 如何构建自定义镜像
 
 该项目已经接入 CircleCI，您在本项目的任意分支提交代码均会触发镜像构建。镜像的版本为本次提交commit-id的前7位。
